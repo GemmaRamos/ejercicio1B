@@ -5,10 +5,10 @@ pipeline {
         stage('Get Code') {
             steps {
                 // Obtener código del repo
-                git 'https://github.com/anieto-unir/helloworld.git'
+                git 'https://github.com/GemmaRamos/ejercicio1A.git'
             }
         }
-    
+
         stage('Build') {
            steps {
               echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
@@ -16,7 +16,7 @@ pipeline {
               bat 'dir'
            }
         }
-        
+
         stage('Unit') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -26,8 +26,7 @@ pipeline {
                     '''
                }
             }
-        }   
-
+        }
 
         stage('Rest') {
             steps {
@@ -35,18 +34,18 @@ pipeline {
                     set FLASK_APP=app\\api.py
                     set FLASK_ENV=development
                     start flask run
-                    start java -jar C:\\Unir\\Ejercicios\\wiremock\\wiremock-jre8-standalone-2.28.0.jar --port 9090 --root-dir C:\\Unir\\Ejercicios\\wiremock
+                    start java -jar C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock
                     set PYTHONPATH=%WORKSPACE%
                     pytest --junitxml=result-rest.xml test\\rest
                 '''
-            }    
+            }
         }
 
         stage('Results') {
             steps {
-                junit 'result*.xml' 
+                junit 'result*.xml'
             }
         }
-     
-    }
+
+     }
 }
