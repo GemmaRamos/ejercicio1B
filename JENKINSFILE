@@ -5,7 +5,7 @@ pipeline {
         stage('Get Code') {
             steps {
                 // Obtener código del repo
-                git 'https://github.com/GemmaRamos/ejercicio1A.git'
+                git branch: 'feature_fix_racecond', url: 'https://github.com/GemmaRamos/ejercicio1A.git'
             }
         }
 
@@ -30,14 +30,44 @@ pipeline {
 
         stage('Rest') {
             steps {
-                bat '''
-                    set FLASK_APP=app\\api.py
-                    set FLASK_ENV=development
-                    start flask run
-                    start java -jar C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock
-                    set PYTHONPATH=%WORKSPACE%
-                    pytest --junitxml=result-rest.xml test\\rest
-                '''
+                script {
+                    def cpuLoad = 100
+                    def retryCount = 0
+                    def maxRetries = 10
+                    def retryInterval = 60 // segundos
+
+                    while (cpuLoad >= 80 && retryCount < maxRetries) {
+                        echo "La CPU está saturada (${cpuLoad}%). Esperando para volver a intentar..."
+                        sleep retryInterval
+
+                        def commandOutput = bat(script: 'wmic cpu get loadpercentage', returnStdout: true).trim()
+                        def lines = commandOutput.readLines().collect { it.trim() }
+                        def loadString = lines.find { it.isNumber() }
+
+                        if (loadString != null) {
+                            cpuLoad = loadString.toInteger()
+                        } else {
+                            echo "No se pudo obtener el valor de carga de la CPU."
+                            cpuLoad = 0
+                        }
+
+                        retryCount++
+                    }
+
+                    if (cpuLoad < 80) {
+                        echo "La CPU ya no está saturada (${cpuLoad}%). Ejecutando pruebas de integración."
+                        bat '''
+                                set FLASK_APP=app\\api.py
+                                set FLASK_ENV=development
+                                start flask run
+                                start java -jar C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock
+                                set PYTHONPATH=%WORKSPACE%
+                                pytest --junitxml=result-rest.xml test\\rest
+                            '''
+                    } else {
+                        error "La CPU sigue saturada después de varios intentos."
+                    }
+                }
             }
         }
 
