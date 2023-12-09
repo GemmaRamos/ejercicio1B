@@ -12,7 +12,7 @@ pipeline {
                     bat 'whoami'
                     bat 'echo %WORKSPACE%'
                     // Obtener código del repositorio y stash
-                    git 'https://github.com/GemmaRamos/ejercicio1A.git'
+                    git branch: 'develop', url: 'https://github.com/GemmaRamos/ejercicio1A.git'
                     stash name: 'code', includes: '**/*'
                 }
             }
