@@ -1,11 +1,8 @@
 pipeline {
-    agent none
+    agent any
 
     stages {
         stage('Get Code') {
-            agent {
-                label 'agente-principal'
-            }
             steps {
                 script {
                     bat 'hostname'
@@ -18,70 +15,68 @@ pipeline {
             }
         }
 
-        stage('Build & Unit') {
-            agent {
-                label 'agente-secundario-1'
-            }
-            steps {
-                script {
-                    bat 'hostname'
-                    bat 'whoami'
-                    bat 'echo %WORKSPACE%'
-                    // Unstash del código y ejecución de Build & Unit tests
-                    unstash 'code'
-                    echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
-                    bat '''
-                        set PYTHONPATH=%WORKSPACE%
-                        pytest --junitxml=result-unit.xml test/unit
-                    '''
-                    stash name: 'results1', includes: 'result*.xml'
+        stage('Tests') {
+            parallel {
+                stage('Unit') {
+                    agent {
+                        label 'agente-secundario-1'
+                    }
+                    steps {
+                        bat 'hostname'
+                        bat 'whoami'
+                        bat 'echo %WORKSPACE%'
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            // Unstash del código y ejecución de Unit tests
+                            unstash name: 'code'
+                            bat '''
+                                set PYTHONPATH=%WORKSPACE%
+                                pytest --junitxml=result-unit.xml test\\unit
+                            '''
+                            stash name: 'results1', includes: 'result*.xml'
+                       }
+                    }
                 }
-            }
-        }
 
-        stage('Rest') {
-            agent {
-                label 'agente-secundario-2'
-            }
-            steps {
-                script {
-                    bat 'hostname'
-                    bat 'whoami'
-                    bat 'echo %WORKSPACE%'
-                    // Unstash del código y ejecución de pruebas de integración REST
-                    unstash 'code'
-                    bat '''
-                        set FLASK_APP=app/api.py
-                        set FLASK_ENV=development
-                        start flask run
-                        start java -jar C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock
-                        set PYTHONPATH=%WORKSPACE%
-                        pytest --junitxml=result-rest.xml test/rest
-                    '''
-                    stash name: 'results2', includes: 'result*.xml'
+                stage('Rest') {
+                    agent {
+                        label 'agente-secundario-2'
+                    }
+                    steps {
+                        bat 'hostname'
+                        bat 'whoami'
+                        bat 'echo %WORKSPACE%'
+                        // Unstash del código y ejecución de pruebas de integración REST
+                        unstash name: 'code'
+                        bat '''
+                            set FLASK_APP=app\\api.py
+                            set FLASK_ENV=development
+                            start flask run
+                            start java -jar C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\gemma.ramos\\Desktop\\UNIR-DevOps\\Ejercicio1\\wiremock
+                            set PYTHONPATH=%WORKSPACE%
+                            pytest --junitxml=result-rest.xml test\\rest
+                        '''
+                        stash name: 'results2', includes: 'result*.xml'
+                    }
                 }
+
             }
         }
 
         stage('Results') {
-            agent {
-                label 'agente-principal'
-            }
             steps {
                 script {
                     bat 'hostname'
                     bat 'whoami'
                     bat 'echo %WORKSPACE%'
                     // Unstash de los resultados y presentación
-                    unstash 'results1'
-                    unstash 'results2'
+                    unstash name: 'results1'
+                    unstash name: 'results2'
                     junit '**/result*.xml'
                 }
             }
         }
 
         stage('Clean Workspace') {
-            agent any
             steps {
                 script {
                     bat 'echo Limpiando el workspace...'
