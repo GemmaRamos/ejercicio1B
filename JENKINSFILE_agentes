@@ -83,10 +83,10 @@ pipeline {
 
         stage('Non Functional Tests') {
             parallel {
-                agent {
-                    label 'agente-secundario-1'
-                }
                 stage('Static'){
+                    agent {
+                        label 'agente-secundario-1'
+                    }
                     steps {
                         bat 'hostname'
                         bat 'whoami'
