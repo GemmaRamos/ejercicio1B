@@ -5,7 +5,7 @@ pipeline {
         stage('Get Code') {
             steps {
                 // Obtener código del repo
-                git 'https://github.com/GemmaRamos/ejercicio1B'
+                git branch: 'feature_fix_coverage', url: 'https://github.com/GemmaRamos/ejercicio1B'
             }
         }
 
